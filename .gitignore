@@ -1,4 +1,3 @@
-ckpts/*
 predictions/config/*
 predictions/logs/*
 predictions/results/*
