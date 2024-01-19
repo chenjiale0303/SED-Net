@@ -3,5 +3,6 @@ predictions/config/*
 predictions/logs/*
 predictions/results/*
 src/normal_smooth_cache/*
-src/__pycache__
+**/__pycache__
 trains
+.vscode

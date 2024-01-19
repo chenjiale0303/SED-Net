@@ -3,7 +3,7 @@ comment=""
 [train]
 model_path = "SEDNet_new_{}_lr_{}_mode_{}_k{}"
 
-gpu = "4,5"
+gpu = "0"
 
 # Dataset path
 dataset = ""
