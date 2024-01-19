@@ -119,6 +119,8 @@ fn = "TEST_SEDNet_{}_{}_{}{}{}{}{}{}_smW{}_in{}_knn{}{}_dropnum{}_Recall".format
         drop_out_num
     )
 
+os.makedirs("./predictions/logs/", exist_ok=True)
+os.makedirs("./predictions/config/", exist_ok=True)
 file_handler = logging.FileHandler(
     f"./predictions/logs/{fn}.log", mode="a"
 )
@@ -175,11 +177,11 @@ split_dict = {"train": config.num_train, "val": config.num_val, "test": config.n
 ms = MeanShift()
 
 
-mix_test_dataset = ori_simple_data(if_normals=if_normals, if_train=False, starts=starts)
+# mix_test_dataset = ori_simple_data(if_normals=if_normals, if_train=False, starts=starts)
 
-loader_test = torch.utils.data.DataLoader(
-    mix_test_dataset, batch_size=1, num_workers=0, shuffle=False, drop_last=False
-)
+# loader_test = torch.utils.data.DataLoader(
+#     mix_test_dataset, batch_size=1, num_workers=0, shuffle=False, drop_last=False
+# )
 
 if SAVE_VIZ:
     os.makedirs(userspace + "./predictions/results/{}{}/results/".format("MyData_" if Use_MyData else "", config.pretrain_model_path), exist_ok=True)
@@ -214,41 +216,37 @@ save_gt = False
 
 # Construct a list with four item [points, labels, normals, primitives]
 import open3d as o3d
-gsp_test_data = [] if not os.path.exists("./gsp/gsp_test_data.pth") else torch.load("./gsp/gsp_test_data.pth")
 
 GSP_DIR = sys.argv[5]
-OUTPUT_DIR = "D:/Dataset/GSP/baselines/SED_prediction_0116"
+OUTPUT_DIR = sys.argv[6]
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-if len(gsp_test_data) == 0 or True:
-    gsp_test_data = []
+test_data = []
+data = []
+for file in os.listdir(GSP_DIR):
+    if not file.endswith(".ply"):
+        continue
+    pcd = o3d.io.read_point_cloud(os.path.join(GSP_DIR, file))
+    points = torch.from_numpy(np.array(pcd.points, dtype=np.float32)).unsqueeze(0)
+    normals = torch.from_numpy(np.array(pcd.normals, dtype=np.float32)).unsqueeze(0)
+    longest_axis = (points.max(axis=1)[0] - points.min(axis=1)[0]).max(axis=1)[0]
+    scale = 1 / longest_axis.max()
+    # diagonal_length = torch.sqrt(torch.sum((points.max(axis=1)[0] - points.min(axis=1)[0]) ** 2, dim=1))
+    points = points * scale
+    normals /= torch.norm(normals, dim=2, keepdim=True)
+    data.append(points)
+    data.append(torch.zeros((points.shape[0], 1, 10000)))
+    data.append(normals)
+    data.append(torch.zeros((points.shape[0], 1, 10000)))
+    data.append(file)
+    data.append(scale)
+    test_data.append(data)
     data = []
-    for file in os.listdir(GSP_DIR):
-        if not file.endswith(".ply"):
-            continue
-        pcd = o3d.io.read_point_cloud(os.path.join(GSP_DIR, file))
-        points = torch.from_numpy(np.array(pcd.points, dtype=np.float32)).unsqueeze(0)
-        normals = torch.from_numpy(np.array(pcd.normals, dtype=np.float32)).unsqueeze(0)
-        longest_axis = (points.max(axis=1)[0] - points.min(axis=1)[0]).max(axis=1)[0]
-        scale = 1 / longest_axis.max()
-        # diagonal_length = torch.sqrt(torch.sum((points.max(axis=1)[0] - points.min(axis=1)[0]) ** 2, dim=1))
-        points = points * scale
-        normals /= torch.norm(normals, dim=2, keepdim=True)
-        data.append(points)
-        data.append(torch.zeros((points.shape[0], 1, 10000)))
-        data.append(normals)
-        data.append(torch.zeros((points.shape[0], 1, 10000)))
-        data.append(file)
-        data.append(scale)
-        gsp_test_data.append(data)
-        data = []
-
-    torch.save(gsp_test_data, "./gsp/gsp_test_data.pth")
 
 
 # for val_b_id, data in enumerate(loader_test):
-for val_b_id, data in enumerate(gsp_test_data):
+for val_b_id, data in enumerate(test_data):
     points_, labels, normals_, primitives_, filename, scale = data[:6]
     
     points = points_.cuda()

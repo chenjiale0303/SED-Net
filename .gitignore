@@ -6,3 +6,4 @@ src/normal_smooth_cache/*
 **/__pycache__
 trains
 .vscode
+out/

@@ -186,9 +186,10 @@ def hpnet_process(affinity_feat, inputs_xyz, normals, id=None, types=None, edges
     edge_knn = 50
     edge_ent_weight = normal_smooth_w 
 
+    os.makedirs("src/normal_smooth_cache", exist_ok=True)
     fn = "src/normal_smooth_cache/Us_{}_{}_{}.pt".format(id, normal_sigma, edge_knn)
     fn_ent = "src/normal_smooth_cache/WUs_{}_{}_{}.pt".format(id, normal_sigma, edge_knn)
-    if id is not None and os.path.exists(fn) and os.path.exists(fn_ent):
+    if id is not None and os.path.exists(fn) and os.path.exists(fn_ent) and False:
         print("{} Us find cache".format(id))
         v = torch.load(fn).cuda(gpu)  # [1, 10000, 12]
         ent = torch.load(fn_ent)
@@ -197,9 +198,9 @@ def hpnet_process(affinity_feat, inputs_xyz, normals, id=None, types=None, edges
         affinity_matrix_normal = construction_affinity_matrix_normal(inputs_xyz, normals, sigma=normal_sigma, knn=edge_knn) 
         v = torch.lobpcg(affinity_matrix_normal, k=edge_topk, niter=10)[1]
         v = v / (torch.norm(v, dim=-1, keepdim=True) + 1e-16)
-        torch.save(v, fn)
+        # torch.save(v, fn)
         ent = compute_entropy(v, CHUNK=CHUNK)
-        torch.save(ent, fn_ent)
+        # torch.save(ent, fn_ent)
 
 
     if drop_rest_idx is not None:
